@@ -10,6 +10,7 @@ FPS = 50
 WIDTH = 400
 HEIGHT = 300
 STEP = 50
+level_map = ''
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
@@ -41,6 +42,7 @@ def load_image(name, color_key=None):
 
 
 def load_level(filename):
+    global level_map
     filename = "data/" + filename
     # читаем уровень, убирая символы перевода строки
     with open(filename, 'r') as mapFile:
@@ -120,10 +122,28 @@ class Tile(pygame.sprite.Sprite):
             tile_width * pos_x, tile_height * pos_y)
 
 
+class Camera:
+    # зададим начальный сдвиг камеры
+    def __init__(self):
+        self.dx = 0
+        self.dy = 0
+
+    # сдвинуть объект obj на смещение камеры
+    def apply(self, obj):
+        obj.rect.x += self.dx
+        obj.rect.y += self.dy
+
+    # позиционировать камеру на объекте target
+    def update(self, target):
+        self.dx = -(target.rect.x + target.rect.w // 2 - WIDTH // 2)
+        self.dy = -(target.rect.y + target.rect.h // 2 - HEIGHT // 2)
+
+
 class Player(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
         super().__init__(player_group, all_sprites)
         self.image = player_image
+        self.x, self.y = pos_x, pos_y
         self.rect = self.image.get_rect().move(
             tile_width * pos_x + 15, tile_height * pos_y + 5)
 
@@ -131,9 +151,12 @@ class Player(pygame.sprite.Sprite):
 try:
     player, level_x, level_y = generate_level(load_level(map_name))
 except Exception as e:
-    print('Приносим извенения! Вы ввели не корректный адресс файла.', e)
-    terminate()
+    player, level_x, level_y = generate_level(load_level('level1.txt'))
+    # print('Приносим извенения! Вы ввели не корректный адресс файла.', e)
+    # terminate()
 start_screen()
+camera = Camera()
+print(level_map)
 
 running = True
 
@@ -141,16 +164,29 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_LEFT:
-                player.rect.x -= STEP
-            if event.key == pygame.K_RIGHT:
-                player.rect.x += STEP
-            if event.key == pygame.K_UP:
-                player.rect.y -= STEP
-            if event.key == pygame.K_DOWN:
-                player.rect.y += STEP
+        try:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFT and level_map[player.y][player.x - 1] != '#' and player.x > 0:
+                    player.x -= 1
+                    player.rect.x -= STEP
+                if event.key == pygame.K_RIGHT and level_map[player.y][player.x + 1] != '#':
+                    player.x += 1
+                    player.rect.x += STEP
+                if event.key == pygame.K_UP and level_map[player.y - 1][player.x] != '#' and player.y > 0:
+                    player.y -= 1
+                    player.rect.y -= STEP
+                if event.key == pygame.K_DOWN and level_map[player.y + 1][player.x] != '#':
+                    player.y += 1
+                    player.rect.y += STEP
+                print(player.x, player.y)
+        except Exception:
+            pass
     screen.fill(pygame.Color(0, 0, 0))
+    # изменяем ракурс камеры
+    camera.update(player)
+    # обновляем положение всех спрайтов
+    for sprite in all_sprites:
+        camera.apply(sprite)
 
     tiles_group.draw(screen)
     player_group.draw(screen)
