@@ -2,13 +2,14 @@ import os
 import sys
 import pygame
 
-map_name = input('Введите название карты: ')
+# map_name = input('Введите название карты: ')
+map_name = 'level_infinity.txt'
 
 pygame.init()
 
 FPS = 50
 WIDTH = 400
-HEIGHT = 300
+HEIGHT = 400
 STEP = 50
 level_map = ''
 
@@ -41,12 +42,28 @@ def load_image(name, color_key=None):
     return image
 
 
-def load_level(filename):
+def load_level(filename, arg=None):
     global level_map
     filename = "data/" + filename
     # читаем уровень, убирая символы перевода строки
-    with open(filename, 'r') as mapFile:
-        level_map = [line.strip() for line in mapFile]
+    if arg is None:
+        with open(filename, 'r') as mapFile:
+            level_map = [line.strip() for line in mapFile]
+    elif arg == 'LEFT':
+        for i in range(len(level_map)):
+            level_map[i] = level_map[i][-1] + level_map[i][:-1]
+    elif arg == 'RIGHT':
+        for i in range(len(level_map)):
+            level_map[i] = level_map[i][1:] + level_map[i][0]
+    elif arg == 'UP':
+        level_map = [level_map[-1]] + level_map[:-1]
+    elif arg == 'DOWN':
+        level_map = level_map[1:] + [level_map[0]]
+    if arg is not None:
+        for i in range(len(level_map)):
+            if '@' in level_map[i]:
+                level_map[i] = level_map[i].replace('@', '.')
+        level_map[4] = level_map[4][:4] + '@' + level_map[4][5:]
 
     # и подсчитываем максимальную длину
     max_width = max(map(len, level_map))
@@ -148,15 +165,9 @@ class Player(pygame.sprite.Sprite):
             tile_width * pos_x + 15, tile_height * pos_y + 5)
 
 
-try:
-    player, level_x, level_y = generate_level(load_level(map_name))
-except Exception as e:
-    player, level_x, level_y = generate_level(load_level('level1.txt'))
-    # print('Приносим извенения! Вы ввели не корректный адресс файла.', e)
-    # terminate()
+player, level_x, level_y = generate_level(load_level(map_name))
 start_screen()
 camera = Camera()
-print(level_map)
 
 running = True
 
@@ -167,18 +178,25 @@ while running:
         try:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFT and level_map[player.y][player.x - 1] != '#' and player.x > 0:
-                    player.x -= 1
-                    player.rect.x -= STEP
+                    all_sprites.empty()
+                    player_group.empty()
+                    tiles_group.empty()
+                    player, level_x, level_y = generate_level(load_level(map_name, 'LEFT'))
                 if event.key == pygame.K_RIGHT and level_map[player.y][player.x + 1] != '#':
-                    player.x += 1
-                    player.rect.x += STEP
+                    all_sprites.empty()
+                    player_group.empty()
+                    tiles_group.empty()
+                    player, level_x, level_y = generate_level(load_level(map_name, 'RIGHT'))
                 if event.key == pygame.K_UP and level_map[player.y - 1][player.x] != '#' and player.y > 0:
-                    player.y -= 1
-                    player.rect.y -= STEP
+                    all_sprites.empty()
+                    player_group.empty()
+                    tiles_group.empty()
+                    player, level_x, level_y = generate_level(load_level(map_name, 'UP'))
                 if event.key == pygame.K_DOWN and level_map[player.y + 1][player.x] != '#':
-                    player.y += 1
-                    player.rect.y += STEP
-                print(player.x, player.y)
+                    all_sprites.empty()
+                    player_group.empty()
+                    tiles_group.empty()
+                    player, level_x, level_y = generate_level(load_level(map_name, 'DOWN'))
         except Exception:
             pass
     screen.fill(pygame.Color(0, 0, 0))
